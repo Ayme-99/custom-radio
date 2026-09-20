@@ -1,3 +1,4 @@
+# --- Python / audio-engine ---
 .venv/
 __pycache__/
 *_tmp/
@@ -6,3 +7,26 @@ __pycache__/
 *.m4a
 *.flac
 j_songs/
+
+# --- Node / server ---
+server/node_modules/
+server/.env
+server/dist/
+npm-debug.log*
+
+# --- Flutter / app ---
+app/.dart_tool/
+app/.flutter-plugin-dependencies
+app/build/
+app/.pub-cache/
+app/.pub/
+app/ephemeral/
+app/*.iml
+app/ios/Flutter/.last_build_id
+app/linux/flutter/ephemeral/
+app/macos/Flutter/ephemeral/
+app/windows/flutter/ephemeral/
+
+# --- Editor / OS ---
+.vscode/
+.DS_Store

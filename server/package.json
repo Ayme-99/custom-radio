@@ -1,0 +1,30 @@
+{
+  "name": "custom-radio",
+  "version": "1.0.0",
+  "description": "Genera tu propia emisora de radio personalizada a partir de tus canciones: un \"DJ\" habla antes de cada tema (te lo presenta, mete algún comentario, una falsa cuña publicitaria de vez en cuando...), igual que las emisoras de radio de los juegos GTA. Todo generado con texto a voz, sin grabar nada tú.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ayme-99/custom-radio.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Ayme-99/custom-radio/issues"
+  },
+  "homepage": "https://github.com/Ayme-99/custom-radio#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.1",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
