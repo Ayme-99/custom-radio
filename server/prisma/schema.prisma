@@ -1,12 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -14,8 +7,78 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum MotorVoz {
+  EDGE
+  OPENAI
+  ELEVENLABS
+}
+
+enum EstadoProyecto {
+  BORRADOR
+  GUION_GENERADO
+  AUDIO_GENERADO
+  EXPIRADO
+}
+
 model Usuario {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id            String          @id @default(uuid())
+  email         String          @unique
+  passwordHash  String
+  apiKeyOpenAI  String?
+  apiKeyEleven  String?
+  createdAt     DateTime        @default(now())
+  proyectos     Proyecto[]
+  perfilesCreados PerfilEmisora[]
+}
+
+model PerfilEmisora {
+  id             String     @id @default(uuid())
+  nombre         String
+  tono           String
+  camposContexto Json
+  humorNegro     Boolean    @default(false)
+  plantillasBase Json?
+  esPublico      Boolean    @default(true)
+  creadoPorId    String?
+  creadoPor      Usuario?   @relation(fields: [creadoPorId], references: [id])
+  proyectos      Proyecto[]
+  createdAt      DateTime   @default(now())
+}
+
+model Proyecto {
+  id              String         @id @default(uuid())
+  nombre          String
+  usuarioId       String
+  usuario         Usuario        @relation(fields: [usuarioId], references: [id])
+  perfilId        String
+  perfil          PerfilEmisora  @relation(fields: [perfilId], references: [id])
+  contexto        Json
+  motorVoz        MotorVoz       @default(EDGE)
+  vozNombre       String?
+  vozRate         String?
+  vozPitch        String?
+  estado          EstadoProyecto @default(BORRADOR)
+  ultimaActividad DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  pistas          Pista[]
+  lineasGuion     LineaGuion[]
+}
+
+model Pista {
+  id         String   @id @default(uuid())
+  proyectoId String
+  proyecto   Proyecto @relation(fields: [proyectoId], references: [id])
+  titulo     String
+  artista    String?
+  orden      Int
+  duracionMs Int?
+}
+
+model LineaGuion {
+  id         String   @id @default(uuid())
+  proyectoId String
+  proyecto   Proyecto @relation(fields: [proyectoId], references: [id])
+  orden      Int
+  texto      String
+  precedeA   String?
 }
