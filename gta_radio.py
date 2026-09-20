@@ -100,19 +100,19 @@ OUTRO_TEMPLATES = [
 ]
 
 # Humor negro genérico: tono irónico/existencial, sin meterse con nadie en
-# concreto ni con temas delicados de verdad (nada de autolesión, accidentes
-# de tráfico ni cosas por el estilo — esto suena dentro de un coche, así que
-# lo dejamos en clave absurda/filosófica, no macabra de verdad).
+# concreto ni con temas delicados de verdad (nada de autolesión, violencia,
+# accidentes de tráfico ni cosas por el estilo — esto suena dentro de un
+# coche, delante de quien sea que vaya contigo, así que lo dejamos en clave
+# absurda/filosófica, no macabra ni explícita de verdad).
 DARK_HUMOR_TEMPLATES = [
     "Dicen que la vida es corta. Pues las canciones de aquí, más todavía.",
     "Recuerda que, tarde o temprano, todos vamos a desaparecer. Mientras tanto, sube el volumen.",
     "La buena noticia es que esta canción se acaba pronto. La mala, que todo lo demás también.",
     "Un optimista es alguien que aún no se ha enterado bien de cómo va esto. Aquí, en {station}, ya lo sabemos y seguimos sonando igual.",
     "Nada dura para siempre. Ni esta canción, ni el DJ, ni tú. Así que disfruta el rato.",
-    "Si el universo se apaga ahora mismo, que sepas que la banda sonora de tus últimos segundos ha sido en {station}. De nada.",
+    "Si el universo se apaga ahora mismo, que sepas que la banda sonora de tus últimos segundos ha sido {station}. De nada.",
     "Cada canción que suena es un minuto menos de tu vida. Pero bueno, al menos suena bien.",
     "No sé qué es peor, si el silencio o yo hablando. Sigamos con música, por si acaso.",
-    "Alguien está entrando en tu casa. ¿Qué haces? ¿Llamas al 911? La policía tarda una media de 35 minutos en responder a una llamada al 911. En ese tiempo, un ladrón podría hacer lo que quisiera con tu mujer, fumarse un cigarrillo, darle la vuelta y volver a por más. ¡Por lo tanto, necesitamos armas para protegernos! (lo cual estoy de acuerdo) ¿Y qué podría protegernos mejor de los ladrones que Ametralladoras fijas, montadas y portátiles. ¡Morteros! Misiles tierra-aire y todo tipo de misiles de búsqueda de calor!"
 ]
 
 
@@ -120,7 +120,35 @@ def _by_artist(artist):
     return f", de {artist}" if artist else ""
 
 
-def build_script(tracks, station="Radio del Golf", dj="tu DJ de confianza",
+class TemplatePicker:
+    """Elige frases al azar de una lista sin repetir ninguna hasta haber usado
+    todas las demás (como una baraja que se reparte entera antes de volver a
+    barajarse). Al rebarajar, evita que la última frase dicha sea la primera
+    de la nueva vuelta, para que tampoco se repita "por los pelos" justo al
+    empezar de nuevo."""
+
+    def __init__(self, pool, rnd):
+        self._pool = list(pool)
+        self._rnd = rnd
+        self._deck = []
+        self._last = None
+
+    def _refill(self):
+        deck = list(self._pool)
+        self._rnd.shuffle(deck)
+        if self._last is not None and len(deck) > 1 and deck[-1] == self._last:
+            deck[-1], deck[-2] = deck[-2], deck[-1]
+        self._deck = deck
+
+    def pick(self):
+        if not self._deck:
+            self._refill()
+        item = self._deck.pop()
+        self._last = item
+        return item
+
+
+def build_script(tracks, station="Ayme Esteishon", dj="tu DJ de confianza",
                   filler_every=4, seed=None, dark_humor=True):
     """Devuelve una lista de tuplas (tipo, contenido) intercalando voz y canciones.
     tipo == "voice" -> contenido es el texto a convertir a audio.
@@ -131,13 +159,16 @@ def build_script(tracks, station="Radio del Golf", dj="tu DJ de confianza",
     if dark_humor:
         filler_pool += DARK_HUMOR_TEMPLATES
 
+    presong_picker = TemplatePicker(PRESONG_TEMPLATES, rnd)
+    filler_picker = TemplatePicker(filler_pool, rnd)
+
     script = [("voice", rnd.choice(INTRO_TEMPLATES).format(station=station, dj=dj))]
     for i, (path, title, artist) in enumerate(tracks):
-        script.append(("voice", rnd.choice(PRESONG_TEMPLATES).format(
+        script.append(("voice", presong_picker.pick().format(
             title=title, by_artist=_by_artist(artist))))
         script.append(("song", str(path)))
         if filler_every and (i + 1) % filler_every == 0 and i != len(tracks) - 1:
-            script.append(("voice", rnd.choice(filler_pool).format(station=station)))
+            script.append(("voice", filler_picker.pick().format(station=station)))
     script.append(("voice", rnd.choice(OUTRO_TEMPLATES).format(station=station)))
     return script
 
@@ -270,7 +301,7 @@ def main():
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--input", required=True, help="Carpeta con tus canciones")
     ap.add_argument("--output", default="mi_radio.mp3", help="Archivo de salida")
-    ap.add_argument("--station", default="Radio del Golf", help="Nombre de la emisora")
+    ap.add_argument("--station", default="Ayme Esteishon", help="Nombre de la emisora")
     ap.add_argument("--dj", default="tu DJ de confianza", help="Nombre/apodo del DJ")
     ap.add_argument("--filler-every", type=int, default=4,
                      help="Cada cuántas canciones meter un comentario extra (0 para desactivar)")
