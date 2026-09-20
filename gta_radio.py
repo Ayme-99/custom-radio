@@ -71,6 +71,7 @@ INTRO_TEMPLATES = [
     "Estás sintonizando {station}, la única emisora que suena mejor que la radio de verdad. Vamos con lo bueno.",
     "Buenas, soy {dj}, y esto es {station}. Prepárate, que empezamos fuerte.",
     "{station}, directa a tus altavoces. Aquí {dj}, acompañándote el viaje.",
+    "¡Y arrancamos! Esto es {station}. ¡Vamos allá!",
 ]
 
 PRESONG_TEMPLATES = [
@@ -80,6 +81,8 @@ PRESONG_TEMPLATES = [
     "{title}{by_artist}. Disfrútala.",
     "Directos a por {title}{by_artist}, sin parar.",
     "Va por ti, quien sea que estés escuchando esto: {title}{by_artist}.",
+    "¡Vamos con {title}{by_artist}!",
+    "Y esto no para. {title}{by_artist}. ¡Aquí llega!",
 ]
 
 FILLER_TEMPLATES = [
@@ -106,9 +109,10 @@ DARK_HUMOR_TEMPLATES = [
     "La buena noticia es que esta canción se acaba pronto. La mala, que todo lo demás también.",
     "Un optimista es alguien que aún no se ha enterado bien de cómo va esto. Aquí, en {station}, ya lo sabemos y seguimos sonando igual.",
     "Nada dura para siempre. Ni esta canción, ni el DJ, ni tú. Así que disfruta el rato.",
-    "Si el universo se apaga ahora mismo, que sepas que la banda sonora de tus últimos segundos ha sido {station}. De nada.",
+    "Si el universo se apaga ahora mismo, que sepas que la banda sonora de tus últimos segundos ha sido en {station}. De nada.",
     "Cada canción que suena es un minuto menos de tu vida. Pero bueno, al menos suena bien.",
     "No sé qué es peor, si el silencio o yo hablando. Sigamos con música, por si acaso.",
+    "Alguien está entrando en tu casa. ¿Qué haces? ¿Llamas al 911? La policía tarda una media de 35 minutos en responder a una llamada al 911. En ese tiempo, un ladrón podría hacer lo que quisiera con tu mujer, fumarse un cigarrillo, darle la vuelta y volver a por más. ¡Por lo tanto, necesitamos armas para protegernos! (lo cual estoy de acuerdo) ¿Y qué podría protegernos mejor de los ladrones que Ametralladoras fijas, montadas y portátiles. ¡Morteros! Misiles tierra-aire y todo tipo de misiles de búsqueda de calor!"
 ]
 
 
@@ -116,7 +120,7 @@ def _by_artist(artist):
     return f", de {artist}" if artist else ""
 
 
-def build_script(tracks, station="Aymesteision", dj="Next Foreign",
+def build_script(tracks, station="Radio del Golf", dj="tu DJ de confianza",
                   filler_every=4, seed=None, dark_humor=True):
     """Devuelve una lista de tuplas (tipo, contenido) intercalando voz y canciones.
     tipo == "voice" -> contenido es el texto a convertir a audio.
@@ -231,6 +235,22 @@ def assemble(script, workdir: Path, voice_engine, voice_name, gap_ms=400,
     return final
 
 
+def safe_export(segment: AudioSegment, path: Path, **kwargs):
+    """Exporta el audio; si el archivo está bloqueado (abierto en un
+    reproductor, en el Explorador de Windows, etc.) no perdemos el trabajo ya
+    hecho — se guarda con un nombre alternativo en su lugar."""
+    try:
+        segment.export(path, **kwargs)
+        return path
+    except PermissionError:
+        alt = path.parent / f"{path.stem}_nuevo{path.suffix}"
+        print(f"  ⚠️  No puedo escribir en {path} (¿está abierto en algún "
+              f"reproductor de música o en el Explorador de Windows? ciérralo e "
+              f"inténtalo de nuevo). Guardando como {alt} en su lugar.")
+        segment.export(alt, **kwargs)
+        return alt
+
+
 def split_for_cd(track: AudioSegment, max_minutes: float):
     """Divide el audio final en bloques de como mucho `max_minutes` cada uno
     (útil para que cada bloque quepa en un CD de audio de 74-80 min)."""
@@ -250,8 +270,8 @@ def main():
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--input", required=True, help="Carpeta con tus canciones")
     ap.add_argument("--output", default="mi_radio.mp3", help="Archivo de salida")
-    ap.add_argument("--station", default="Ayme Esteishon", help="Nombre de la emisora")
-    ap.add_argument("--dj", default="Next Foreign", help="Nombre/apodo del DJ")
+    ap.add_argument("--station", default="Radio del Golf", help="Nombre de la emisora")
+    ap.add_argument("--dj", default="tu DJ de confianza", help="Nombre/apodo del DJ")
     ap.add_argument("--filler-every", type=int, default=4,
                      help="Cada cuántas canciones meter un comentario extra (0 para desactivar)")
     ap.add_argument("--no-dark-humor", action="store_true",
@@ -304,12 +324,12 @@ def main():
         parts = split_for_cd(final, args.max_minutes)
         for i, part in enumerate(parts, 1):
             part_path = out_path.parent / f"{out_path.stem}_disco{i}{out_path.suffix}"
-            part.export(part_path, format="mp3", bitrate="192k")
-            print(f"  \U0001F4BF Disco {i}: {part_path} ({len(part) / 60000:.1f} min)")
+            written = safe_export(part, part_path, format="mp3", bitrate="192k")
+            print(f"  \U0001F4BF Disco {i}: {written} ({len(part) / 60000:.1f} min)")
         print(f"Necesitarás {len(parts)} CD(s) de audio de {args.max_minutes} min para grabarlo todo.")
     else:
-        final.export(out_path, format="mp3", bitrate="192k")
-        print(f"Guardado en: {out_path}")
+        written = safe_export(final, out_path, format="mp3", bitrate="192k")
+        print(f"Guardado en: {written}")
 
 
 if __name__ == "__main__":
