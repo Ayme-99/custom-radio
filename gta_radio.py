@@ -164,11 +164,18 @@ def build_script(tracks, station="Ayme Esteishon", dj="tu DJ de confianza",
 
     script = [("voice", rnd.choice(INTRO_TEMPLATES).format(station=station, dj=dj))]
     for i, (path, title, artist) in enumerate(tracks):
-        script.append(("voice", presong_picker.pick().format(
-            title=title, by_artist=_by_artist(artist))))
+        presong_line = presong_picker.pick().format(
+            title=title, by_artist=_by_artist(artist))
+        if filler_every and i > 0 and i % filler_every == 0:
+            # El filler y el presong van pegados en UNA sola locución (una
+            # sola llamada de voz), para que suene de corrido en vez de como
+            # dos audios distintos enganchados.
+            filler_line = filler_picker.pick().format(station=station)
+            voice_line = f"{filler_line} {presong_line}"
+        else:
+            voice_line = presong_line
+        script.append(("voice", voice_line))
         script.append(("song", str(path)))
-        if filler_every and (i + 1) % filler_every == 0 and i != len(tracks) - 1:
-            script.append(("voice", filler_picker.pick().format(station=station)))
     script.append(("voice", rnd.choice(OUTRO_TEMPLATES).format(station=station)))
     return script
 
