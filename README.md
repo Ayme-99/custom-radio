@@ -1,9 +1,19 @@
-# Radio estilo GTA
+# Custom Radio
 
-Coge una carpeta de canciones tuyas y monta un único archivo de audio en el que
-un "DJ" habla antes de cada canción (te la presenta, mete algún comentario,
-una falsa cuña publicitaria de vez en cuando...), igual que las emisoras de
-radio de los juegos GTA. Todo generado con texto a voz, sin grabar nada tú.
+Genera tu propia emisora de radio personalizada a partir de tus canciones: un
+"DJ" habla antes de cada tema (te lo presenta, mete algún comentario, una
+falsa cuña publicitaria de vez en cuando...), igual que las emisoras de radio
+de los juegos GTA. Todo generado con texto a voz, sin grabar nada tú.
+
+Este repo empezó como un script de línea de comandos y está evolucionando
+hacia una **webapp** (Flutter + backend Node) donde podrás importar tus
+canciones desde el navegador, elegir una **finalidad de emisora** (Radio GTA,
+un disco de aniversario para tu pareja, un roadtrip con amigos...) y dejar
+que la IA escriba el guion del DJ adaptado a ese contexto. El detalle de esa
+evolución está en `custom-radio-design-doc.md`.
+
+Mientras tanto, el script de Python (`gta_radio.py`) funciona de forma
+independiente y es la base de la lógica de generación.
 
 ## Instalación
 
@@ -27,9 +37,9 @@ archivo) y genera `mi_radio.mp3` con las locuciones intercaladas.
 
 ### Para grabarlo directamente en CDs de audio
 
-Como ya hablamos de que tu coche seguramente solo lee CD de audio normales
-(limitados a ~74-80 min), puedes pedirle al script que reparta el resultado
-en bloques que quepan en cada disco:
+Como el coche seguramente solo lee CD de audio normales (limitados a ~74-80
+min), puedes pedirle al script que reparta el resultado en bloques que quepan
+en cada disco:
 
 ```
 python3 gta_radio.py --input ./canciones --output ./radio.mp3 --max-minutes 78
@@ -37,7 +47,7 @@ python3 gta_radio.py --input ./canciones --output ./radio.mp3 --max-minutes 78
 
 Esto genera `radio_disco1.mp3`, `radio_disco2.mp3`, etc., cada uno de máximo
 78 minutos, listos para grabar cada uno como un CD de audio con Windows Media
-Player tal como vimos antes.
+Player.
 
 ### Otras opciones útiles
 
@@ -88,11 +98,16 @@ archivo `gta_radio.py` (`INTRO_TEMPLATES`, `PRESONG_TEMPLATES`,
 quita o reescribe frases ahí para darle tu toque — cuantas más variantes
 tengas, menos se repetirá el DJ en emisoras largas.
 
-Si en algún momento quieres que las frases las escriba una IA en vez de
-plantillas fijas (más variedad, nunca se repite igual), dímelo y adapto la
-función `build_script` para que le pida el guion a un modelo de lenguaje en
-vez de elegir de estas listas — pero tal y como está ya funciona sin depender
-de ninguna cuenta ni coste.
+## Hacia dónde va el proyecto
+
+La idea es dejar de depender de plantillas fijas y de la línea de comandos:
+la webapp permitirá elegir un **perfil de emisora** (Radio GTA, Aniversario,
+Roadtrip, o uno personalizado) que define el tono y el contexto que la IA usa
+para escribir el guion, en vez de elegir frases de una lista cerrada. La
+generación seguirá corriendo en un servidor, y el coste de la voz (OpenAI,
+ElevenLabs) correrá a cargo de la API key de cada usuario. Los detalles de
+arquitectura, modelo de datos y política de almacenamiento están en
+`custom-radio-design-doc.md`.
 
 ## Notas
 
