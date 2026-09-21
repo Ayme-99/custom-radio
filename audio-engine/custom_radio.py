@@ -74,36 +74,43 @@ def collect_tracks(input_dir: Path, shuffle=False, seed=None):
 #    (edítalas a tu gusto, es la parte más "tuya" del proyecto)
 # ---------------------------------------------------------------------------
 
+# Las plantillas siguen las "prompting best practices" de Eleven v3: audio
+# tags entre corchetes para dirigir la interpretación ([excited], [laughs],
+# [warmly]...), pausas con puntos suspensivos/guiones en vez de <break> (v3 no
+# soporta SSML) y alguna acotación emocional en el propio texto. Motores que
+# no sean elevenlabs simplemente leen los corchetes como texto raro si no se
+# filtran — ver `strip_audio_tags` más abajo, que los quita automáticamente
+# para edge/openai.
 INTRO_TEMPLATES = [
-    "Estás sintonizando {station}, la única emisora que suena mejor que la radio de verdad. Vamos con lo bueno.",
-    "Buenas, soy {dj}, y esto es {station}. Prepárate, que empezamos fuerte.",
-    "{station}, directa a tus altavoces. Aquí {dj}, acompañándote el viaje.",
-    "¡Y arrancamos! Esto es {station}. ¡Vamos allá!",
+    "[energetic] Estás sintonizando {station}, la única emisora que suena mejor que la radio de verdad. Vamos con lo bueno.",
+    "[warmly] Buenas, soy {dj}, y esto es {station}. [excited] Prepárate, que empezamos fuerte.",
+    "{station}, directa a tus altavoces. [friendly] Aquí {dj}, acompañándote el viaje.",
+    "[excited] ¡Y arrancamos! Esto es {station}. ¡Vamos allá!",
 ]
 
 PRESONG_TEMPLATES = [
-    "Ahora toca {title}{by_artist}. Sube el volumen.",
-    "Esto que viene es {title}{by_artist}. Una de mis favoritas, la verdad.",
+    "Ahora toca {title}{by_artist}. [excited] Sube el volumen.",
+    "Esto que viene es {title}{by_artist}. [fondly] Una de mis favoritas, la verdad.",
     "Y seguimos con {title}{by_artist}. No toques el dial.",
-    "{title}{by_artist}. Disfrútala.",
+    "{title}{by_artist}… [warmly] disfrútala.",
     "Directos a por {title}{by_artist}, sin parar.",
     "Va por ti, quien sea que estés escuchando esto: {title}{by_artist}.",
-    "¡Vamos con {title}{by_artist}!",
-    "Y esto no para. {title}{by_artist}. ¡Aquí llega!",
+    "[excited] ¡Vamos con {title}{by_artist}!",
+    "Y esto no para. {title}{by_artist}. [laughs] ¡Aquí llega!",
 ]
 
 FILLER_TEMPLATES = [
-    "Recuerda: conducir cansado también es conducir distraído. Para y descansa si lo necesitas.",
+    "[serious] Recuerda: conducir cansado también es conducir distraído. Para y descansa si lo necesitas.",
     "El tráfico hoy pinta tranquilo, así que aprovecha y disfruta del viaje.",
-    "Un aviso rápido: en {station} nunca hay anuncios de verdad, solo yo hablando de más.",
-    "Si vas con prisa, baja el pie del acelerador, que las curvas no perdonan.",
-    "Esto va dedicado a quien esté escuchando esto en su coche ahora mismo. Sí, tú.",
-    "{station}, sonando fuerte, como siempre.",
+    "[chuckles] Un aviso rápido: en {station} nunca hay anuncios de verdad, solo yo hablando de más.",
+    "Si vas con prisa, baja el pie del acelerador — las curvas no perdonan.",
+    "[warmly] Esto va dedicado a quien esté escuchando esto en su coche ahora mismo. Sí, tú.",
+    "[energetic] {station}, sonando fuerte, como siempre.",
 ]
 
 OUTRO_TEMPLATES = [
-    "Eso ha sido todo por ahora en {station}. Gracias por acompañarnos.",
-    "Se acaba el viaje musical de hoy en {station}. Hasta la próxima.",
+    "[warmly] Eso ha sido todo por ahora en {station}. Gracias por acompañarnos.",
+    "[wistfully] Se acaba el viaje musical de hoy en {station}… hasta la próxima.",
 ]
 
 # Humor negro genérico: tono irónico/existencial, sin meterse con nadie en
@@ -112,15 +119,23 @@ OUTRO_TEMPLATES = [
 # coche, delante de quien sea que vaya contigo, así que lo dejamos en clave
 # absurda/filosófica, no macabra ni explícita de verdad).
 DARK_HUMOR_TEMPLATES = [
-    "Dicen que la vida es corta. Pues las canciones de aquí, más todavía.",
-    "Recuerda que, tarde o temprano, todos vamos a desaparecer. Mientras tanto, sube el volumen.",
-    "La buena noticia es que esta canción se acaba pronto. La mala, que todo lo demás también.",
-    "Un optimista es alguien que aún no se ha enterado bien de cómo va esto. Aquí, en {station}, ya lo sabemos y seguimos sonando igual.",
-    "Nada dura para siempre. Ni esta canción, ni el DJ, ni tú. Así que disfruta el rato.",
-    "Si el universo se apaga ahora mismo, que sepas que la banda sonora de tus últimos segundos ha sido {station}. De nada.",
-    "Cada canción que suena es un minuto menos de tu vida. Pero bueno, al menos suena bien.",
-    "No sé qué es peor, si el silencio o yo hablando. Sigamos con música, por si acaso.",
+    "[deadpan] Dicen que la vida es corta. Pues las canciones de aquí, más todavía.",
+    "[dryly] Recuerda que, tarde o temprano, todos vamos a desaparecer. Mientras tanto, sube el volumen.",
+    "[deadpan] La buena noticia es que esta canción se acaba pronto. La mala… que todo lo demás también.",
+    "[wryly] Un optimista es alguien que aún no se ha enterado bien de cómo va esto. Aquí, en {station}, ya lo sabemos y seguimos sonando igual.",
+    "[softly] Nada dura para siempre. Ni esta canción, ni el DJ, ni tú. Así que disfruta el rato.",
+    "[deadpan] Si el universo se apaga ahora mismo, que sepas que la emisora de tus últimos segundos ha sido {station}. [chuckles] De nada.",
+    "[dryly] Cada canción que suena es un minuto menos de tu vida. Pero bueno, al menos suena bien.",
+    "No sé qué es peor, si el silencio o yo hablando… sigamos con música, por si acaso.",
 ]
+
+_AUDIO_TAG_RE = re.compile(r"\[[a-zA-Z ]+\]\s*")
+
+
+def strip_audio_tags(text):
+    """Quita los audio tags tipo [excited] del texto (para motores que no son
+    eleven_v3, que no los entienden y los leería en voz alta tal cual)."""
+    return re.sub(r"\s+", " ", _AUDIO_TAG_RE.sub("", text)).strip()
 
 
 def _by_artist(artist):
@@ -195,7 +210,7 @@ def build_script(tracks, station="Ayme Esteishon", dj="tu DJ de confianza",
 
 async def _edge_tts_synth(text, out_path, voice, rate="+0%", pitch="+0Hz"):
     import edge_tts
-    communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
+    communicate = edge_tts.Communicate(strip_audio_tags(text), voice, rate=rate, pitch=pitch)
     await communicate.save(str(out_path))
 
 
@@ -218,7 +233,7 @@ def synthesize(text, out_path, engine="edge", voice=None, rate="+0%", pitch="+0H
         with client.audio.speech.with_streaming_response.create(
             model="gpt-4o-mini-tts",
             voice=voice or "onyx",
-            input=text,
+            input=strip_audio_tags(text),
             instructions=instructions or (
                 "Habla como un locutor de radio profesional en español: voz cálida, "
                 "segura de sí misma, con energía, buen ritmo y carisma. Nada de tono "
@@ -261,7 +276,19 @@ def radio_effect(segment: AudioSegment) -> AudioSegment:
     return seg.apply_gain(2)
 
 
-def assemble(script, workdir: Path, voice_engine, voice_name, gap_ms=400,
+def _trim_silence(segment: AudioSegment, silence_thresh_db=-42, keep_ms=60):
+    """Recorta el silencio de fábrica al principio/final del clip (lo que suele
+    dejar el TTS antes/después de hablar), dejando un pequeño margen `keep_ms`
+    para que no suene cortado de golpe."""
+    start_trim = detect_leading_silence(segment, silence_threshold=silence_thresh_db)
+    end_trim = detect_leading_silence(segment.reverse(), silence_threshold=silence_thresh_db)
+    duration = len(segment)
+    start = max(0, start_trim - keep_ms)
+    end = max(start, duration - max(0, end_trim - keep_ms))
+    return segment[start:end]
+
+
+def assemble(script, workdir: Path, voice_engine, voice_name, gap_ms=150,
              radio_fx=False, synth_fn=synthesize, rate="+0%", pitch="+0Hz",
              instructions=None):
     workdir.mkdir(parents=True, exist_ok=True)
@@ -274,7 +301,7 @@ def assemble(script, workdir: Path, voice_engine, voice_name, gap_ms=400,
             print(f"  \U0001F399️  Locución {idx + 1}/{len(script)}: {payload[:60]}...")
             synth_fn(payload, tmp, engine=voice_engine, voice=voice_name,
                      rate=rate, pitch=pitch, instructions=instructions)
-            seg = AudioSegment.from_file(tmp)
+            seg = _trim_silence(AudioSegment.from_file(tmp))
             if radio_fx:
                 seg = radio_effect(seg)
         else:
@@ -339,6 +366,9 @@ def main():
     ap.add_argument("--voice-instructions", default=None,
                      help="[Solo openai/gpt-4o-mini-tts] Instrucción de estilo para la voz "
                           "(por defecto ya pide tono de locutor de radio profesional)")
+    ap.add_argument("--gap-ms", type=int, default=150,
+                     help="Silencio (ms) entre cada locución y la siguiente canción/locución "
+                          "(por defecto 150; súbelo si suena todo demasiado pegado)")
     ap.add_argument("--radio-fx", action="store_true",
                      help="Aplicar un filtro sutil de 'transmisión de radio' a las locuciones "
                           "(desactivado por defecto: con voces sintéticas suele sonar peor)")
@@ -363,8 +393,8 @@ def main():
     out_path = Path(args.output)
     workdir = out_path.parent / f"{out_path.stem}_tmp"
     final = assemble(script, workdir, args.voice_engine, args.voice,
-                      radio_fx=args.radio_fx, rate=args.rate, pitch=args.pitch,
-                      instructions=args.voice_instructions)
+                      gap_ms=args.gap_ms, radio_fx=args.radio_fx, rate=args.rate,
+                      pitch=args.pitch, instructions=args.voice_instructions)
 
     duration_min = len(final) / 60000
     print(f"✅ Emisora montada: {duration_min:.1f} minutos en total.")
