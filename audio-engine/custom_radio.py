@@ -22,6 +22,7 @@ import sys
 from pathlib import Path
 
 from pydub import AudioSegment
+from pydub.silence import detect_leading_silence
 
 try:
     from dotenv import load_dotenv
@@ -227,13 +228,17 @@ def synthesize(text, out_path, engine="edge", voice=None, rate="+0%", pitch="+0H
             resp.stream_to_file(str(out_path))
     elif engine == "elevenlabs":
         # De pago, la voz más realista. Necesita ELEVENLABS_API_KEY.
+        # eleven_v3 (por defecto) admite audio tags entre corchetes en el propio
+        # texto para dirigir la interpretación, p.ej. [excited], [whispers],
+        # [laughs] — ver los "audio tags" en la guía de prompting de v3.
         import requests
         api_key = os.environ["ELEVENLABS_API_KEY"]
         voice_id = voice or os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
+        model_id = os.environ.get("ELEVENLABS_MODEL_ID", "eleven_v3")
         r = requests.post(
             f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
             headers={"xi-api-key": api_key},
-            json={"text": text, "model_id": "eleven_multilingual_v2"},
+            json={"text": text, "model_id": model_id},
             timeout=60,
         )
         r.raise_for_status()
