@@ -24,6 +24,12 @@ from pathlib import Path
 from pydub import AudioSegment
 
 try:
+    from dotenv import load_dotenv
+    load_dotenv(override=True)  # carga audio-engine/.env si existe (API keys locales); prioridad sobre el entorno
+except ImportError:  # python-dotenv es opcional: sin él, solo variables de entorno del sistema
+    pass
+
+try:
     from mutagen import File as MutagenFile
 except ImportError:  # mutagen es opcional: sin él, usamos el nombre del archivo
     MutagenFile = None
