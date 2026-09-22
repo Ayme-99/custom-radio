@@ -10,25 +10,28 @@ hacia una **webapp** (Flutter + backend Node) donde podrás importar tus
 canciones desde el navegador, elegir una **finalidad de emisora** (Radio GTA,
 un disco de aniversario para tu pareja, un roadtrip con amigos...) y dejar
 que la IA escriba el guion del DJ adaptado a ese contexto. El detalle de esa
-evolución está en `custom-radio-design-doc.md`.
+evolución está en `design-document.md`.
 
-Mientras tanto, el script de Python (`gta_radio.py`) funciona de forma
-independiente y es la base de la lógica de generación.
+Mientras tanto, el script de Python (`audio-engine/custom_radio.py`)
+funciona de forma independiente y es la base de la lógica de generación.
 
 ## Instalación
 
-Necesitas Python 3.9+ y **ffmpeg** instalado en tu sistema (en Windows, lo más
-fácil es `winget install ffmpeg` o descargarlo de ffmpeg.org y añadirlo al PATH;
-en Mac, `brew install ffmpeg`).
+Necesitas Python 3.10 o superior (probado hasta 3.12) y **ffmpeg** instalado
+en tu sistema (en Windows, lo más fácil es `winget install ffmpeg` o
+descargarlo de ffmpeg.org y añadirlo al PATH; en Mac, `brew install ffmpeg`).
 
 ```
-pip install -r requirements.txt
+pip install -r audio-engine/requirements.txt
 ```
+
+(En Python 3.13+ todavía no funciona: `pydub` usa el módulo `audioop`, que se
+eliminó de la librería estándar en esa versión.)
 
 ## Uso básico
 
 ```
-python3 gta_radio.py --input ./canciones --output ./mi_radio.mp3
+python3 audio-engine/custom_radio.py --input ./canciones --output ./mi_radio.mp3
 ```
 
 Esto busca todos los `.mp3/.wav/.m4a/.flac/.ogg` de la carpeta `canciones`,
@@ -42,7 +45,7 @@ min), puedes pedirle al script que reparta el resultado en bloques que quepan
 en cada disco:
 
 ```
-python3 gta_radio.py --input ./canciones --output ./radio.mp3 --max-minutes 78
+python3 audio-engine/custom_radio.py --input ./canciones --output ./radio.mp3 --max-minutes 78
 ```
 
 Esto genera `radio_disco1.mp3`, `radio_disco2.mp3`, etc., cada uno de máximo
@@ -57,8 +60,9 @@ Player.
   siempre da el mismo orden y guion).
 - `--filler-every 4`: cada cuántas canciones se cuela un comentario extra
   (tráfico, cuña falsa, etc.). Pon `0` para desactivarlo.
-- `--no-radio-fx`: por defecto la voz del DJ se filtra un poco para sonar
-  "a radio"; con esto se deja limpia.
+- `--radio-fx`: filtra un poco la voz del DJ para que suene "a radio". Está
+  desactivado por defecto, porque con voces sintéticas el filtro suele sonar
+  peor, no mejor.
 - `--no-dark-humor`: por defecto se mezclan algunos comentarios de humor
   negro (tono irónico/existencial, nada de temas delicados de verdad) entre
   las cuñas normales; con esto se desactivan y solo quedan las neutras.
@@ -84,15 +88,17 @@ edge-tts --list-voices | grep es-
 
 y luego, por ejemplo: `--voice es-MX-JorgeNeural` o `--voice es-ES-ElviraNeural`.
 
-Para usar OpenAI o ElevenLabs (mejor calidad, con coste), instala la librería
-correspondiente (`pip install openai` o ya tienes `requests`), exporta la
-variable de entorno con tu API key, y añade `--voice-engine openai` (o
-`elevenlabs`) al comando.
+Para usar ElevenLabs no hace falta instalar nada más (usa `requests`, que ya
+viene en `audio-engine/requirements.txt`). Para OpenAI, descomenta ahí la
+línea `openai` y vuelve a instalar. En los dos casos, exporta la variable de
+entorno con tu API key (o ponla en `audio-engine/.env`, ver
+`audio-engine/.env.example`) y añade `--voice-engine openai` (o `elevenlabs`)
+al comando.
 
 ## Personalizar lo que dice el DJ
 
 Todo lo que dice el DJ sale de unas listas de plantillas al principio del
-archivo `gta_radio.py` (`INTRO_TEMPLATES`, `PRESONG_TEMPLATES`,
+archivo `audio-engine/custom_radio.py` (`INTRO_TEMPLATES`, `PRESONG_TEMPLATES`,
 `FILLER_TEMPLATES`, `OUTRO_TEMPLATES`). Son texto normal con un par de huecos
 (`{title}`, `{by_artist}`, `{station}`, `{dj}`) que se rellenan solos. Añade,
 quita o reescribe frases ahí para darle tu toque — cuantas más variantes
@@ -107,7 +113,7 @@ para escribir el guion, en vez de elegir frases de una lista cerrada. La
 generación seguirá corriendo en un servidor, y el coste de la voz (OpenAI,
 ElevenLabs) correrá a cargo de la API key de cada usuario. Los detalles de
 arquitectura, modelo de datos y política de almacenamiento están en
-`custom-radio-design-doc.md`.
+`design-document.md`.
 
 ## Notas
 
