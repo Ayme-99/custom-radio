@@ -55,6 +55,14 @@ Flutter (web) → API Node (gestión usuarios, proyectos, orquestación) → Ser
 - id, email, credenciales
 - api_keys (cifradas) por proveedor (OpenAI, ElevenLabs)
 
+  El cifrado es AES-256-GCM con una clave única de servidor, en la variable de
+  entorno `CLAVE_CIFRADO_API_KEYS`. En base de datos se guarda un envoltorio
+  `v1.<iv>.<tag>.<cifrado>`, de forma que cada valor lleva su propio IV y el
+  algoritmo se puede cambiar más adelante sin adivinar cómo se cifró cada fila.
+  La aplicación nunca ve el texto cifrado: el cliente de Prisma
+  (`server/src/lib/prisma.js`) cifra al escribir y descifra al leer. Detalle de
+  configuración y operación en `server/README.md`.
+
 **Proyecto**
 - id, usuario_id, nombre
 - perfil_id usado

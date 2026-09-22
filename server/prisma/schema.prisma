@@ -24,8 +24,10 @@ model Usuario {
   id            String          @id @default(uuid())
   email         String          @unique
   passwordHash  String
-  apiKeyOpenAI  String?
-  apiKeyEleven  String?
+  // Cifradas con AES-256-GCM antes de salir de la aplicación: el nombre de la
+  // columna lo deja claro en la propia base de datos. Ver src/lib/cifrado.js.
+  apiKeyOpenAI  String?         @map("apiKeyOpenAICifrada")
+  apiKeyEleven  String?         @map("apiKeyElevenCifrada")
   createdAt     DateTime        @default(now())
   proyectos     Proyecto[]
   perfilesCreados PerfilEmisora[]

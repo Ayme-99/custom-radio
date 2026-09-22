@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "node --test test/*.test.js",
+    "generar-clave": "node scripts/generar-clave.js",
+    "cifrar-api-keys": "node scripts/cifrar-api-keys.js"
   },
   "repository": {
     "type": "git",
