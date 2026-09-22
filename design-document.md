@@ -39,15 +39,24 @@ Perfiles iniciales: **Radio GTA** (el ya existente) y **Aniversario** (como ejem
 ## 4. Arquitectura
 
 ```
-Flutter (web) → API Node (gestión usuarios, proyectos, orquestación) → Servicio de generación de audio
-                                                                          (Python: TTS + pydub/ffmpeg, o
-                                                                           reimplementado en Node)
+Flutter (web) → API Node (gestión usuarios, proyectos, orquestación) → HTTP interno → Servicio de generación de
+                                                                                        audio (Python: FastAPI
+                                                                                        envolviendo audio-engine/
+                                                                                        custom_radio.py)
 ```
 
 - **Frontend (Flutter web)**: import de canciones, formulario de perfil/contexto, selección de motor de voz, progreso de generación, descarga.
 - **Backend (Node/Express, stack ya conocido)**: usuarios, proyectos, metadatos de pistas, guion generado, orquestación de la llamada al motor de audio.
-- **Motor de generación**: servicio encargado de construir el guion, sintetizar la voz, montar el audio final y partirlo en bloques (para CD u otros formatos de salida).
+- **Motor de generación**: servicio encargado de construir el guion, sintetizar la voz, montar el audio final y partirlo en bloques (para CD u otros formatos de salida). Decisión de stack: ver más abajo.
 - **Generación de guion por IA**: se construye un prompt a partir del perfil de emisora + contexto del usuario y se llama al LLM elegido. Como fallback sin IA, cada perfil puede incluir plantillas fijas con huecos (título, artista, nombre de la emisora, etc.).
+
+### 4.1 Decisión: stack del servicio de generación de audio
+
+**Se mantiene Python**, como microservicio separado del backend Node, expuesto por HTTP (no invocado como subproceso).
+
+- `audio-engine/custom_radio.py` ya está validado en producción manual: los tres motores TTS (edge/OpenAI/ElevenLabs v3), el pipeline pydub/ffmpeg, el recorte de silencios y la partición en bloques para CD funcionan. Reimplementar todo eso en Node obligaría a reescribir el pipeline de audio entero y el port de Node de `edge-tts` está bastante menos mantenido que la librería Python — más riesgo y más tiempo para el mismo resultado.
+- Coste asumido: dos runtimes en el stack (Node + Python). En el despliegue (Render), el motor de audio pasa de ser un script CLI a una API mínima (ej. FastAPI) con un endpoint tipo `POST /generate` que recibe el guion + las pistas y devuelve el mp3 (o el estado de progreso), desplegada como su propio servicio. El backend Node la llama por HTTP en vez de lanzarla como subproceso, para evitar bloqueos de I/O y problemas de gestión de proceso hijo.
+- Ver [#3](https://github.com/Ayme-99/custom-radio/issues/3).
 
 ## 5. Modelo de datos (persistente, sin audio)
 
@@ -94,7 +103,7 @@ Regla general: **nada de audio con copyright se persiste indefinidamente**. Solo
 
 ## 8. Preguntas abiertas / decisiones pendientes
 
-- [ ] Stack exacto del servicio de generación: ¿Python como microservicio separado, o reimplementar TTS/ffmpeg en Node para tener un único lenguaje en el backend?
+- [x] ~~Stack exacto del servicio de generación~~ — decidido: Python como microservicio HTTP separado (ver sección 4.1).
 - [ ] ¿Cómo se gestiona el fallo a mitad de generación (ej. corte de red con la API de OpenAI/ElevenLabs a mitad de una tanda larga)? ¿Reintentos, guardado parcial de progreso?
 - [ ] ¿Los perfiles de emisora los define solo la plataforma, o el usuario puede crear/guardar los suyos propios?
 - [ ] Definir el TTL exacto en horas.
