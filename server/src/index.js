@@ -9,6 +9,7 @@ if (!process.env.JWT_SECRET) {
 
 const authRouter = require('./routes/auth');
 const perfilesRouter = require('./routes/perfiles');
+const proyectosRouter = require('./routes/proyectos');
 
 const app = express();
 app.use(cors());
@@ -20,6 +21,7 @@ app.get('/health', (req, res) => {
 
 app.use('/auth', authRouter);
 app.use('/perfiles', perfilesRouter);
+app.use('/proyectos', proyectosRouter);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
