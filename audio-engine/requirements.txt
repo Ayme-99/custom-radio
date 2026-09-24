@@ -1,0 +1,17 @@
+# Dependencias del motor de audio (audio-engine/custom_radio.py).
+#
+#   pip install -r audio-engine/requirements.txt
+#
+# Además hace falta ffmpeg instalado en el sistema (pydub lo usa para leer y
+# escribir audio); no se instala con pip. Ver README.md.
+
+# --- Núcleo (lo que necesita cualquier ejecución) ---
+pydub==0.25.1           # montaje y exportación del audio final
+edge-tts==7.2.8         # motor de voz por defecto: gratis y sin API key
+mutagen==1.48.1         # lee título/artista de las etiquetas de cada canción
+python-dotenv==1.2.3    # carga audio-engine/.env con las API keys locales
+requests==2.34.2        # llamadas a la API de ElevenLabs (--voice-engine elevenlabs)
+
+# --- Opcional ---
+# Solo si vas a usar --voice-engine openai, descomenta esta línea:
+# openai==3.17.0
